@@ -1,0 +1,7 @@
+crowdstrikeConfig:
+    clientID: ""
+    clientSecret: ""
+    clusterName: my-cluster
+    env: us-1
+    cid:
+    dockerAPIToken:

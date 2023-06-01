@@ -1,0 +1,13 @@
+dev
+dev/
+aws/dev
+aws/dev/
+.idea
+.idea/
+aws/eks/.terraform/
+aws/eks/.terraform
+aws/eks/eks_fargate/.terraform/
+aws/eks/eks_fargate/.terraform
+aws/eks/eks_managed_node/.terraform/
+aws/eks/eks_managed_node/.terraform
+aws/eks/.terraform.lock.hcl
