@@ -149,7 +149,7 @@ class SystemCheck:
   def check_and_install_aws_cli(self):
     os_name = platform.system().lower()
     architecture = platform.machine().lower()
-    supported = (os_name, architecture) in {('linux', 'aarch64'), ('darwin', 'arm64')}
+    supported = (os_name, architecture) in {('linux', 'x86_64'), ('linux', 'aarch64'), ('darwin', 'arm64')}
 
     if not supported:
       self.unsupported_os_message()
@@ -167,6 +167,13 @@ class SystemCheck:
     self.info_logger.info('installing aws cli.')
 
     install_commands = {
+      ('linux', 'x86_64'): [
+        'curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"',
+        'unzip awscliv2.zip',
+        'sudo ./aws/install',
+        'sudo chmod +x /usr/local/bin/aws',
+        '/usr/local/bin/aws --version'
+      ],
       ('linux', 'aarch64'): [
         'curl https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip -o awscliv2.zip',
         'unzip awscliv2.zip',
@@ -205,9 +212,12 @@ class SystemCheck:
     os_name = platform.system().lower()
     architecture = platform.machine().lower()
 
-    if (os_name, architecture) == ('linux', 'aarch64'):
-      download_cmd = "curl -o aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/" \
-                     "1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator"
+    if (os_name, architecture) == ('linux', 'x86_64'):
+      download_cmd = "curl -Lo aws-iam-authenticator https://github.com/kubernetes-sigs/aws-iam-authenticator" \
+                     "/releases/download/v0.5.9/aws-iam-authenticator_0.5.9_linux_amd64"
+    elif (os_name, architecture) == ('linux', 'aarch64'):
+      download_cmd = "curl -Lo aws-iam-authenticator https://github.com/kubernetes-sigs/aws-iam-authenticator" \
+                     "/releases/download/v0.5.9/aws-iam-authenticator_0.5.9_linux_arm64"
     elif (os_name, architecture) == ('darwin', 'arm64'):
       download_cmd = "curl -o aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/" \
                      "1.21.2/2021-07-05/bin/darwin/arm64/aws-iam-authenticator"
