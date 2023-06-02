@@ -72,7 +72,6 @@ class SystemCheck:
     Check if unzip is installed and if not, install it.
     """
     os_name = platform.system().lower()
-    print(os_name)
 
     if self.run_command('unzip -v'):
       return True
@@ -401,12 +400,18 @@ class SystemCheck:
   def check_and_install_docker(self):
     try:
       print("Checking if Docker is installed...")
-      self.run_command("docker --version")
 
-      print("Docker is already installed.")
-    except subprocess.CalledProcessError:
-      self.fix_sources_list()
-
-      print("Docker is not installed. Starting Docker installation...")
-      if self.install_docker():
+      if self.run_command("docker --version"):
+        print("Docker is already installed.")
         return True
+      else:
+        self.fix_sources_list()
+
+        print("Docker is not installed. Starting Docker installation...")
+
+        if self.install_docker():
+          return True
+        else:
+          return False
+    except (subprocess.CalledProcessError, Exception):
+      return False
