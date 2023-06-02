@@ -73,8 +73,13 @@ class SystemCheck:
     """
     os_name = platform.system().lower()
 
+    print('checking if unzip is already installed.\n')
+
     if self.run_command('unzip -v'):
+      print('unzip is already installed.\n')
       return True
+
+    print('unzip is not installed. installing unzip.\n')
 
     if os_name == 'linux':
       install_cmd = 'sudo apt install -y unzip'
@@ -83,7 +88,11 @@ class SystemCheck:
     else:
       return False
 
-    return self.run_command(install_cmd)
+    if self.run_command(install_cmd):
+      print('unzip installation successful.')
+    else:
+      print('unzip installation failed. exiting the program')
+      exit()
 
   @decorator.standard_func_logger
   @decorator.standard_func_timer
@@ -382,7 +391,7 @@ class SystemCheck:
             status_output = process.stdout.decode()
 
             if "running" in status_output.lower():
-              print("Docker service is now running.\n")
+              print("docker service is now running.\n")
               break
           except (subprocess.CalledProcessError, Exception) as _:
             pass
