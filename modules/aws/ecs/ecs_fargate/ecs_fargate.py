@@ -316,7 +316,7 @@ class AWSECSClusterManager:
           self.error_logger.error(f"Error executing command: {result.stderr}")
           raise RuntimeError(f"Error executing command: {result.stderr}")
         else:
-          self.info_logger.info(filename.split('.')[0], ' patched with falcon container')
+          self.info_logger.info(f"{filename.split('.')[0]} patched with falcon container")
           patched_filenames.append(filename)
       except Exception as e:
         self.error_logger.error(f"An error occurred while running the docker_run command with {filename}. Error: {e}")
@@ -804,23 +804,23 @@ class AWSECSClusterManager:
     config_file_parameters = self.read_config_file(file_path)
 
     for region, ecs_clusters in config_file_parameters.items():
-      print(f'starting requested operations on region {region}. this will take a while...\n')
+      print(f'### starting requested operations on region {region}. this will take a while... ###\n')
       self.info_logger.info(f'starting requested operations on region {region}\n')
 
       for clusters, task_definitions in ecs_clusters.items():
-        print(f'patching task definitions of region {region}')
+        print(f'patching task definitions of region {region}\n')
         self.info_logger.info(f'patching task definitions of region {region}')
 
         patched_filenames, cluster_arns = self.patch_definition_ops(region, clusters, task_definitions, aws_keys)
 
         if options['ecs_register_definitions'] == 'yes':
-          print(f'registering task definitions of region {region}')
+          print(f'registering task definitions of region {region}\n')
           self.info_logger.info(f'registering task definitions of region {region}')
 
           registered_definitions = self.register_definition_ops(patched_filenames)
 
           if options['ecs_launch_new_tasks'] == 'yes':
-            print(f'launching new tasks and, if requested, stopping old tasks of region {region}')
+            print(f'launching new tasks and, if requested, stopping old tasks of region {region}\n')
             self.info_logger.info(f'launching new tasks and, if requested, stopping old tasks of region {region}')
 
             if registered_definitions:
