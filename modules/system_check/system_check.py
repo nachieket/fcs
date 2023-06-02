@@ -27,7 +27,8 @@ class SystemCheck:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        errors='replace'
+        errors='replace',
+        timeout=300
       )
       if process.stdout:
         self.info_logger.info(process.stdout)

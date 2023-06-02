@@ -121,7 +121,9 @@ def main():
         eks_fargate = AWSFargateClusterManager()
         eks_fargate.start_eks_fargate_operations(options)
     elif options['cluster'] == 'ecs_fargate':
-      check_and_add_ecs_tools()
+      if not check_and_add_ecs_tools():
+        print('Could not install required tools. Exiting the program.')
+        exit()
 
       aws = AWSCredentialCheck()
       aws.check_and_accept_aws_credentials()
