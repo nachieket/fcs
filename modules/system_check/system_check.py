@@ -413,5 +413,6 @@ class SystemCheck:
           return True
         else:
           return False
-    except (subprocess.CalledProcessError, Exception):
+    except (subprocess.CalledProcessError, Exception) as e:
+      print(e)
       return False
