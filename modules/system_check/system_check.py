@@ -67,7 +67,7 @@ class SystemCheck:
 
   @decorator.standard_func_logger
   @decorator.standard_func_timer
-  def manage_unzip(self, os_name):
+  def check_and_install_unzip(self, os_name):
     """
     Check if unzip is installed and if not, install it.
     """
@@ -132,7 +132,7 @@ class SystemCheck:
       self.unsupported_os_message()
 
     # Check and manage unzip
-    if not self.manage_unzip(os_name):
+    if not self.check_and_install_unzip(os_name):
       print('unzip installation failed. exiting the program.\n')
       self.info_logger.error('unzip installation failed. exiting the program.')
       exit()
