@@ -72,6 +72,7 @@ class SystemCheck:
     Check if unzip is installed and if not, install it.
     """
     os_name = platform.system().lower()
+    print(os_name)
 
     if self.run_command('unzip -v'):
       return True
