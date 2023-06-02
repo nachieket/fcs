@@ -804,15 +804,24 @@ class AWSECSClusterManager:
     config_file_parameters = self.read_config_file(file_path)
 
     for region, ecs_clusters in config_file_parameters.items():
-      print(f'starting requested operations on region {region}\n')
+      print(f'starting requested operations on region {region}. this will take a while...\n')
       self.info_logger.info(f'starting requested operations on region {region}\n')
 
       for clusters, task_definitions in ecs_clusters.items():
+        print(f'patching task definitions of region {region}')
+        self.info_logger.info(f'patching task definitions of region {region}')
+
         patched_filenames, cluster_arns = self.patch_definition_ops(region, clusters, task_definitions, aws_keys)
 
         if options['ecs_register_definitions'] == 'yes':
+          print(f'registering task definitions of region {region}')
+          self.info_logger.info(f'registering task definitions of region {region}')
+
           registered_definitions = self.register_definition_ops(patched_filenames)
 
           if options['ecs_launch_new_tasks'] == 'yes':
+            print(f'launching new tasks and, if requested, stopping old tasks of region {region}')
+            self.info_logger.info(f'launching new tasks and, if requested, stopping old tasks of region {region}')
+
             if registered_definitions:
               self.definition_start_stop_ops(region, cluster_arns, clusters, options, registered_definitions)
