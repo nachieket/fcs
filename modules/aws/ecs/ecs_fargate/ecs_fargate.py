@@ -643,7 +643,7 @@ class AWSECSClusterManager:
           failed += 1
           self.error_logger.error(f"Error executing command: {result.stderr}")
         else:
-          self.info_logger.info(task_arn['taskArn'], 'task stopped successfully')
+          self.info_logger.info(f"{task_arn['taskArn']} task stopped successfully")
       except Exception as e:
         failed += 1
         self.error_logger.error(f"{task_arn['taskArn']} did not stop successfully. Error: {e}")
