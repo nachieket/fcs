@@ -76,7 +76,7 @@ def check_and_add_ecs_tools():
     return False
 
   if (
-    system.check_and_install_unzip and system.check_and_install_aws_cli()
+    system.check_and_install_unzip() and system.check_and_install_aws_cli()
     and system.check_and_install_aws_iam_authenticator() and system.check_and_install_docker()
   ):
     return True
