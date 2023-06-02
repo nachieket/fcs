@@ -46,7 +46,7 @@ class SystemCheck:
     print('this operating system is currently not supported.\n')
     self.info_logger.error('this operating system is currently not supported.')
 
-    print('Exiting the program\n')
+    print('exiting the program\n')
     self.info_logger.error('exiting the program')
 
     exit()
@@ -60,8 +60,8 @@ class SystemCheck:
     if self.run_command("which brew"):
       return True
 
-    print("Homebrew not found. Installing Homebrew...\n")
-    self.info_logger.info("Homebrew not found. Installing Homebrew...")
+    print("homebrew not found. installing homebrew...\n")
+    self.info_logger.info("homebrew not found. installing homebrew...")
     return self.run_command(
       "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"")
 
@@ -143,8 +143,8 @@ class SystemCheck:
     if self.manage_terraform(os_name, architecture):
       return True
 
-    print('Terraform installation failed. exiting the program.\n')
-    self.info_logger.error('Terraform installation failed. exiting the program.')
+    print('terraform installation failed. exiting the program.\n')
+    self.info_logger.error('terraform installation failed. exiting the program.')
     return False
 
   @decorator.standard_func_logger
@@ -269,8 +269,8 @@ class SystemCheck:
         self.error_logger.error("Error occurred during Helm installation.")
         return False
     else:
-      print("Unsupported system:", os_name, architecture, "\n")
-      self.info_logger.error("Unsupported system")
+      print("unsupported system:", os_name, architecture, "\n")
+      self.info_logger.error("unsupported system")
       return False
 
   @decorator.standard_func_logger
@@ -301,8 +301,8 @@ class SystemCheck:
   @decorator.standard_func_logger
   @decorator.standard_func_timer
   def install_kubectl_macos(self):
-    print("Installing kubectl on macOS...\n")
-    self.info_logger.info("Installing kubectl on macOS...")
+    print("installing kubectl on MacOS...\n")
+    self.info_logger.info("installing kubectl on MacOS...")
 
     # Install kubectl
     if self.run_command("brew install kubectl"):
@@ -329,7 +329,7 @@ class SystemCheck:
       elif system == "Darwin":
         return self.install_kubectl_macos()
       else:
-        print("Unsupported system:", system, "\n")
+        print("unsupported system:", system, "\n")
         self.error_logger.error("Unsupported system")
         sys.exit(1)
     else:
@@ -354,7 +354,7 @@ class SystemCheck:
   def install_docker(self):
     """Installs Docker."""
 
-    print("Installing Docker...")
+    print("installing Docker...\n")
 
     try:
       self.run_command("sudo apt-get install -y software-properties-common")
@@ -369,7 +369,7 @@ class SystemCheck:
         command = "sudo apt-get install -y docker-ce docker-ce-cli containerd.io"
         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, check=True)
       except (subprocess.CalledProcessError, Exception) as _:
-        print('Failed to start docker service. Trying to start it...')
+        print('failed to start docker service. Trying to start it...\n')
 
         for attempt in range(60):
           try:
@@ -389,25 +389,25 @@ class SystemCheck:
 
           time.sleep(5)
         else:  # Will run if the loop completes normally (i.e., Docker failed to start after all attempts)
-          print("Failed to start Docker service. Exiting the Program.")
+          print("failed to start Docker service. Exiting the Program.\n")
           return False
 
-      print("Docker installed successfully.")
+      print("docker installed successfully.\n")
       return True
     except subprocess.CalledProcessError as e:
-      print(f"Error while installing Docker: {str(e)}")
+      print(f"error while installing docker: {str(e)}")
 
   def check_and_install_docker(self):
     try:
-      print("Checking if Docker is installed...")
+      print("checking if Docker is installed...\n")
 
       if self.run_command("docker --version"):
-        print("Docker is already installed.")
+        print("docker is already installed.")
         return True
       else:
         self.fix_sources_list()
 
-        print("Docker is not installed. Starting Docker installation...")
+        print("docker is not installed. starting Docker installation...\n")
 
         if self.install_docker():
           return True

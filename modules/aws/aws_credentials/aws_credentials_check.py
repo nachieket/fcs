@@ -65,7 +65,7 @@ class AWSCredentialCheck:
   def check_aws_profile(self):
     credentials_file = os.path.expanduser("~/.aws/credentials")
     if not os.path.exists(credentials_file):
-      print("Credentials file not found.")
+      print("credentials file not found.\n")
       return False
 
     config = configparser.ConfigParser()
@@ -121,7 +121,7 @@ class AWSCredentialCheck:
       return False
 
   def accept_aws_values(self):
-    print("Please provide your AWS configuration details:")
+    print("please provide your AWS configuration details:\n")
     aws_access_key = input("AWS Access Key ID: ")
     aws_secret_key = input("AWS Secret Access Key: ")
 
