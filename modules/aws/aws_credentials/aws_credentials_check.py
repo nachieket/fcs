@@ -93,7 +93,7 @@ class AWSCredentialCheck:
         return True
       elif default_valid and not saml_valid:
         print('there is a default profile but no valid saml profile exists.\n')
-        print('continuing the program execution with default profile...')
+        print('continuing the program execution with default profile...\n')
         return True
       elif default_valid and saml_valid:
         print('both default and saml profiles are valid')

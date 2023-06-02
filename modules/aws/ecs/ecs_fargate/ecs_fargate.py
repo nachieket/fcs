@@ -226,8 +226,6 @@ class AWSECSClusterManager:
       return False
 
   def patch_task_definitions(self, aws_keys, task_definition_filenames):
-    print(aws_keys)
-    exit()
     patched_filenames = []
     cwd = os.getcwd()
 
@@ -259,10 +257,10 @@ class AWSECSClusterManager:
       try:
         docker_run = f'sudo docker run --rm -v {cwd}/tmp/aws/ecs/temp_definition:/var/run/spec --rm \
                       {aws_keys["aws_account_id"]}.dkr.ecr.{aws_keys["aws_repo_region"]}.\
-                      amazonaws.com/{aws_keys["aws_repo"]}:{aws_keys["image_uri"]} \
+                      amazonaws.com/{aws_keys["aws_repo"]}:{aws_keys["image_version"]} \
                       -cid {aws_keys["falcon_cid"]} \
                       -image {aws_keys["aws_account_id"]}.dkr.ecr.{aws_keys["aws_repo_region"]}.\
-                      amazonaws.com/{aws_keys["aws_repo"]}:{aws_keys["image_uri"]} \
+                      amazonaws.com/{aws_keys["aws_repo"]}:{aws_keys["image_version"]} \
                       -ecs-spec-file /var/run/spec/taskdefinition.json \
                       -pulltoken {pull_token} > tmp/aws/ecs/patched_definitions/{filename}'
 
