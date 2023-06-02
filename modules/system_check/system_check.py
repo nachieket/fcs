@@ -182,14 +182,14 @@ class SystemCheck:
       ('linux', 'x86_64'): [
         'sudo curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip',
         'sudo unzip -o awscliv2.zip -d ./awscli',
-        'sudo ./awscli/install',
+        'sudo ./awscli/aws/install',
         'sudo chmod +x /usr/local/bin/aws',
         'sudo /usr/local/bin/aws --version'
       ],
       ('linux', 'aarch64'): [
         'sudo curl https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip -o awscliv2.zip',
         'sudo unzip -o awscliv2.zip -d ./awscli',
-        'sudo ./awscli/install',
+        'sudo ./awscli/aws/install',
         'sudo chmod +x /usr/local/bin/aws',
         'sudo /usr/local/bin/aws --version'
       ],
