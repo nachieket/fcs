@@ -363,7 +363,7 @@ class SystemCheck:
   def install_docker(self):
     """Installs Docker."""
 
-    print("installing Docker...\n")
+    print("installing docker...\n")
 
     try:
       self.run_command("sudo apt-get install -y software-properties-common")
@@ -416,7 +416,7 @@ class SystemCheck:
       else:
         self.fix_sources_list()
 
-        print("docker is not installed. starting Docker installation...\n")
+        print("docker is not installed. starting docker installation...\n")
 
         if self.install_docker():
           return True
