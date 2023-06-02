@@ -244,7 +244,8 @@ class AWSECSClusterManager:
             if "/tmp/CrowdStrike/rootfs/entrypoint-ecs.sh" in content['containerDefinitions'][0]['entryPoint']:
               continue
 
-        mv_file = f"sudo cp -f {cwd}/tmp/aws/ecs/task_definitions/{filename} {cwd}/tmp/aws/ecs/temp_definition/taskdefinition.json"
+        mv_file = f"sudo cp -f {cwd}/tmp/aws/ecs/task_definitions/{filename} " \
+                  f"{cwd}/tmp/aws/ecs/temp_definition/taskdefinition.json"
 
         result = subprocess.run(mv_file, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
@@ -263,9 +264,6 @@ class AWSECSClusterManager:
                      f'amazonaws.com/{aws_keys["aws_repo"]}:{aws_keys["image_version"]} ' \
                      f'-ecs-spec-file /var/run/spec/taskdefinition.json ' \
                      f'-pulltoken {pull_token} > tmp/aws/ecs/patched_definitions/{filename}'
-
-        print(docker_run)
-        exit()
 
         result = subprocess.run(docker_run, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
