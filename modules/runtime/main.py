@@ -6,6 +6,7 @@ from modules.custom_parser.custom_parser import CustomParser
 from modules.aws_k8s_cluster_manager.aws_eks_managed_node_manager import AWSEKSClusterManager
 from modules.aws_k8s_cluster_manager.aws_eks_fargate_manager import AWSFargateClusterManager
 from modules.aws.ecs.ecs_fargate.ecs_fargate import AWSECSClusterManager
+from modules.aws.aws_credentials.aws_credentials_check import AWSCredentialCheck
 
 from modules.logging.logging import CustomLogger
 from modules.decorators.decorators import CustomDecorator
@@ -36,10 +37,10 @@ def add_usr_local_bin_to_path():
 
 @decorator.standard_func_logger
 @decorator.standard_func_timer
-def check_and_add_system_tools():
-  print('\n####################')
-  print('### system tools ###')
-  print('####################\n')
+def check_and_add_eks_tools():
+  print('\n###################################')
+  print('### Check and Install EKS Tools ###')
+  print('###################################\n')
   system = SystemCheck()
 
   os_name = platform.system().lower()
@@ -54,6 +55,29 @@ def check_and_add_system_tools():
     system.check_and_install_terraform() and system.check_and_install_aws_cli() and
     system.check_and_install_aws_iam_authenticator() and system.check_and_install_helm() and
     system.check_and_install_kubectl()
+  ):
+    return True
+  else:
+    return False
+
+
+@decorator.standard_func_logger
+@decorator.standard_func_timer
+def check_and_add_ecs_tools():
+  print('\n###################################')
+  print('### Check and Install ECS Tools ###')
+  print('###################################\n')
+  system = SystemCheck()
+
+  os_name = platform.system().lower()
+
+  if os_name == 'darwin':
+    print('You are running this program on MacOS, which is not supported with this option.')
+    return False
+
+  if (
+    system.check_and_install_aws_cli() and system.check_and_install_aws_iam_authenticator()
+    and system.check_and_install_docker()
   ):
     return True
   else:
@@ -77,7 +101,7 @@ def main():
     if options['cluster'] == 'eks_managed_node' or options['cluster'] == 'eks_fargate':
       # console print message
       if options['action'] == 'create':
-        if not check_and_add_system_tools():
+        if not check_and_add_eks_tools():
           print('check and/or installation of system tools failed. exiting the program.')
           exit()
 
@@ -97,10 +121,10 @@ def main():
         eks_fargate = AWSFargateClusterManager()
         eks_fargate.start_eks_fargate_operations(options)
     elif options['cluster'] == 'ecs_fargate':
-      check_and_add_system_tools()
-      
-      system = SystemCheck()
-      system.check_and_install_docker()
+      check_and_add_ecs_tools()
+
+      aws = AWSCredentialCheck()
+      aws.check_and_accept_aws_credentials()
 
       ecs = AWSECSClusterManager()
       ecs.start_ecs_cluster_operations(options)
