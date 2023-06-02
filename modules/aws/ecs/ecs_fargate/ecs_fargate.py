@@ -650,7 +650,8 @@ class AWSECSClusterManager:
       'aws_account_id': aws_account_id,
       'aws_repo_region': aws_repo_region,
       'aws_repo': aws_repo,
-      'image_version': image_version
+      'image_version': image_version,
+      'falcon_cid': keys['ecs_falcon_cid']
     }
 
     config_file_parameters = self.read_config_file(file_path)
