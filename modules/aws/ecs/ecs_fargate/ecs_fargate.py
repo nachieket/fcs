@@ -545,7 +545,7 @@ class AWSECSClusterManager:
         data = json.loads(result.stdout)
         task_id = data['tasks'][0]['taskArn']  # Extract the task ARN from the response
 
-        print(f"Successfully launched a task {task_id} for definition: {definition}.")
+        self.info_logger.info(f"Successfully launched a task {task_id} for definition: {definition}.")
 
         # If the cluster ARN is not yet a key in the dictionary, initialize it with an empty list
         if arn['clusterArn'] not in launched_task_arns:
