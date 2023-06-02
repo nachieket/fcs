@@ -180,21 +180,21 @@ class SystemCheck:
 
     install_commands = {
       ('linux', 'x86_64'): [
-        'curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip',
-        'unzip awscliv2.zip',
+        'sudo curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip',
+        'sudo unzip awscliv2.zip',
         'sudo ./aws/install',
         'sudo chmod +x /usr/local/bin/aws',
-        '/usr/local/bin/aws --version'
+        'sudo /usr/local/bin/aws --version'
       ],
       ('linux', 'aarch64'): [
-        'curl https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip -o awscliv2.zip',
-        'unzip awscliv2.zip',
+        'sudo curl https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip -o awscliv2.zip',
+        'sudo unzip awscliv2.zip',
         'sudo ./aws/install',
         'sudo chmod +x /usr/local/bin/aws',
-        '/usr/local/bin/aws --version'
+        'sudo /usr/local/bin/aws --version'
       ],
       ('darwin', 'arm64'): [
-        'curl https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg',
+        'sudo curl https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg',
         'sudo installer -pkg AWSCLIV2.pkg -target /'
       ]
     }
