@@ -264,6 +264,9 @@ class AWSECSClusterManager:
                       -ecs-spec-file /var/run/spec/taskdefinition.json \
                       -pulltoken {pull_token} > tmp/aws/ecs/patched_definitions/{filename}'
 
+        print(docker_run)
+        exit()
+
         result = subprocess.run(docker_run, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
         if result.returncode != 0:
