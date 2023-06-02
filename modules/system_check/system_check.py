@@ -411,7 +411,7 @@ class SystemCheck:
       print("checking if Docker is installed...\n")
 
       if self.run_command("docker --version"):
-        print("docker is already installed.")
+        print("docker is already installed.\n")
         return True
       else:
         self.fix_sources_list()
