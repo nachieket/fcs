@@ -369,7 +369,7 @@ class SystemCheck:
         command = "sudo apt-get install -y docker-ce docker-ce-cli containerd.io"
         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, check=True)
       except (subprocess.CalledProcessError, Exception) as _:
-        print('failed to start docker service. Trying to start it...\n')
+        print('failed to start docker service. trying to start it. this may take a few minutes...\n')
 
         for attempt in range(60):
           try:
@@ -382,7 +382,7 @@ class SystemCheck:
             status_output = process.stdout.decode()
 
             if "running" in status_output.lower():
-              print("Docker service is now running.")
+              print("Docker service is now running.\n")
               break
           except (subprocess.CalledProcessError, Exception) as _:
             pass
