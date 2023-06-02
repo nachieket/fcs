@@ -112,7 +112,7 @@ class AWSCredentialCheck:
       subprocess.run(aws_command + ["region", region])
       subprocess.run(aws_command + ["output", output])
 
-      print("AWS configuration complete.")
+      print("AWS configuration complete.\n")
 
       return True
     except Exception as e:

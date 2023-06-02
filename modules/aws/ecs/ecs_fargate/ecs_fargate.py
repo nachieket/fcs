@@ -226,6 +226,8 @@ class AWSECSClusterManager:
       return False
 
   def patch_task_definitions(self, aws_keys, task_definition_filenames):
+    print(aws_keys)
+    exit()
     patched_filenames = []
     cwd = os.getcwd()
 
