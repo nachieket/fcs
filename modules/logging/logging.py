@@ -6,6 +6,9 @@ import logging
 main_log_dir = '/tmp/crowdstrike'
 terraform_log_dir = os.path.join(main_log_dir, 'terraform_logs')
 system_log_dir = os.path.join(main_log_dir, 'system_logs')
+aws_log_dir = os.path.join(main_log_dir, 'aws')
+eks_log_dir = os.path.join(main_log_dir, 'aws/eks')
+ecs_log_dir = os.path.join(main_log_dir, 'aws/ecs')
 
 for log_dir in [main_log_dir, terraform_log_dir, system_log_dir]:
     if not os.path.exists(log_dir):

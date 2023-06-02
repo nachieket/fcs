@@ -8,6 +8,9 @@ import time
 from platform import system
 from collections import defaultdict
 
+from modules.logging.logging import CustomLogger
+from modules.decorators.decorators import CustomDecorator
+
 
 class CustomConfigParser(configparser.ConfigParser):
   def optionxform(self, optionstr):
@@ -17,15 +20,23 @@ class CustomConfigParser(configparser.ConfigParser):
 
 
 class AWSECSClusterManager:
-  @staticmethod
-  def read_config_file(file_path):
+  info_logger = CustomLogger("info_logger", '/tmp/crowdstrike/aws/ecs/ecs_info.log').get_logger()
+  error_logger = CustomLogger("error_logger", '/tmp/crowdstrike/aws/ecs/ecs_error.log').get_logger()
+
+  decorator = CustomDecorator(info_logger, error_logger)
+
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def read_config_file(self, file_path):
     if not os.path.exists(file_path):
+      self.error_logger.error(f"Config file '{file_path}' not found.")
       raise FileNotFoundError(f"Config file '{file_path}' not found.")
 
     config = CustomConfigParser()
     config.read(file_path)
 
     if not config.has_section("task_definitions"):
+      self.error_logger.error("No 'task_definitions' section found in config file.")
       raise ValueError("No 'task_definitions' section found in config file.")
 
     result = defaultdict(dict)
@@ -37,6 +48,7 @@ class AWSECSClusterManager:
       try:
         region, env_name = task_key.split("/")
       except ValueError:
+        self.error_logger.error(f"Invalid task key '{task_key}' in config file.")
         raise ValueError(f"Invalid task key '{task_key}' in config file.")
 
       task_defs = [
@@ -50,8 +62,9 @@ class AWSECSClusterManager:
 
     return dict(result)
 
-  @staticmethod
-  def get_cluster_arns(region, clusters):
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def get_cluster_arns(self, region, clusters):
     """Gets the ARNs of the specified clusters in the given region.
 
         Args:
@@ -68,15 +81,19 @@ class AWSECSClusterManager:
       command = f"aws ecs describe-clusters --clusters {clusters} --region {region} " \
                 f"--query clusters[0].clusterArn --output text"
 
+    self.info_logger.info(f'executing command {command}')
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
     if result.returncode != 0:
       print(f"Error executing command: {result.stderr}")
+      self.error_logger.error(f"Error executing command: {result.stderr}")
     else:
+      self.info_logger.info(result.stdout.rsplit())
       return result.stdout.rsplit()
 
-  @staticmethod
-  def get_task_definition_arns(region, task_definitions):
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def get_task_definition_arns(self, region, task_definitions):
     """
     This function fetches the task definition ARNs from AWS ECS.
     :param region: The AWS region in which to list the task definitions.
@@ -90,6 +107,8 @@ class AWSECSClusterManager:
     if task_definitions[0] == 'all_task_definitions':
       command = f"aws ecs list-task-definitions --region {region} --status ACTIVE --sort DESC --query " \
                 f"taskDefinitionArns[] --output text"
+
+      self.info_logger.info(f'executing command {command}')
       result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
       for task_def_arn in result.stdout.rsplit():
@@ -113,11 +132,15 @@ class AWSECSClusterManager:
       for task_definition in task_definitions[0].split(','):
         command = f"aws ecs describe-task-definition --task-definition {task_definition} --region {region} " \
                   f"--output text --query taskDefinition.taskDefinitionArn"
+
+        self.info_logger.info(f'executing command {command}')
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
         task_definition_arns.append(result.stdout.rsplit()[0])
 
     return task_definition_arns
 
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
   def get_cluster_specific_task_definition_arns(self, region, cluster_arns):
     task_definition_arns = []
 
@@ -128,9 +151,11 @@ class AWSECSClusterManager:
         command = f'aws ecs describe-tasks --cluster {cluster} --task {arn} --region {region} --query ' \
                   f'tasks[0].taskDefinitionArn --output text'
 
+        self.info_logger.info(f'executing command {command}')
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
         if result.returncode != 0:
+          self.error_logger.error(f"Error executing command {command}")
           raise RuntimeError(f"Error executing command {command}")
         else:
           x_arn = result.stdout.rsplit()[0]
@@ -139,8 +164,9 @@ class AWSECSClusterManager:
 
     return task_definition_arns
 
-  @staticmethod
-  def get_task_definition_json_files(region, task_definitions):
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def get_task_definition_json_files(self, region, task_definitions):
     task_definition_json_files = []
 
     for task_definition_name in task_definitions:
@@ -148,13 +174,16 @@ class AWSECSClusterManager:
                  task_definition_name,
                  "--output", "json"]
       try:
+        self.info_logger.info(f'executing command {command}')
         output = subprocess.check_output(command)
       except subprocess.CalledProcessError as e:
+        self.error_logger.error(f"Error executing command: {e.stderr}")
         raise RuntimeError(f"Error executing command: {e.stderr}")
 
       try:
         data = json.loads(output)
       except json.JSONDecodeError:
+        self.error_logger.error("Unable to parse JSON response from describe-task-definition command.")
         raise ValueError("Unable to parse JSON response from describe-task-definition command.")
 
       task_definition_data = data['taskDefinition']
@@ -170,13 +199,17 @@ class AWSECSClusterManager:
           json.dump(task_definition_data, f, indent=2)
         task_definition_json_files.append(f'{region}__{name}__{version}.json')
       except IOError as e:
+        self.error_logger.error(f"Error writing task definition JSON file: {e}")
         raise RuntimeError(f"Error writing task definition JSON file: {e}")
 
     return task_definition_json_files
 
-  @staticmethod
-  def get_pull_token(aws_keys):
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def get_pull_token(self, aws_keys):
     # Get the login password for ECR
+    self.info_logger.info(f'executing command to get ecr login password')
+
     login_password = subprocess.check_output(
       ["aws", "ecr", "get-login-password", "--region", aws_keys["aws_repo_region"]]
     ).decode("utf-8").strip()
@@ -205,33 +238,44 @@ class AWSECSClusterManager:
     elif system() == "Linux":
       pull_token = base64.b64encode(auths_json.encode("utf-8"), altchars=None).decode("utf-8").rstrip("\n")
     else:
+      self.error_logger.error("This function only supports macOS and Linux.")
       raise NotImplementedError("This function only supports macOS and Linux.")
 
     return pull_token
 
-  @staticmethod
-  def login_to_ecr(aws_keys):
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def login_to_ecr(self, aws_keys):
     try:
       ecr_login = f'sudo docker login -u AWS -p $(aws ecr get-login-password --region {aws_keys["aws_repo_region"]}) ' \
                   f'{aws_keys["aws_account_id"]}.dkr.ecr.eu-west-2.amazonaws.com/{aws_keys["aws_repo"]}'
 
+      self.info_logger.info(f'executing command {ecr_login}')
       result = subprocess.run(ecr_login, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
       if result.returncode != 0:
+        self.error_logger.error(f"Error executing command {ecr_login}: {result.stderr}")
         raise RuntimeError(f"Error executing command {ecr_login}: {result.stderr}")
       else:
         return True
     except Exception as e:
+      self.error_logger.error(f"An error occurred while running the ecr_login command: {e}")
       print(f"An error occurred while running the ecr_login command: {e}")
       return False
 
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
   def patch_task_definitions(self, aws_keys, task_definition_filenames):
     patched_filenames = []
     cwd = os.getcwd()
 
+    self.info_logger.info('trying to get pull token')
     pull_token = self.get_pull_token(aws_keys)
+    self.info_logger.info('got the pull token')
 
+    self.info_logger.info('trying to login to aws ecr')
     self.login_to_ecr(aws_keys)
+    self.info_logger.info('login to aws ecr complete')
 
     for filename in task_definition_filenames:
       try:
@@ -265,37 +309,44 @@ class AWSECSClusterManager:
                      f'-ecs-spec-file /var/run/spec/taskdefinition.json ' \
                      f'-pulltoken {pull_token} > tmp/aws/ecs/patched_definitions/{filename}'
 
+        self.info_logger.info(f'executing command: {docker_run}')
         result = subprocess.run(docker_run, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
         if result.returncode != 0:
+          self.error_logger.error(f"Error executing command: {result.stderr}")
           raise RuntimeError(f"Error executing command: {result.stderr}")
         else:
-          print(filename.split('.')[0], ' patched with falcon container')
+          self.info_logger.info(filename.split('.')[0], ' patched with falcon container')
           patched_filenames.append(filename)
       except Exception as e:
+        self.error_logger.error(f"An error occurred while running the docker_run command with {filename}. Error: {e}")
         print(f"An error occurred while running the docker_run command with {filename}. Error: {e}")
 
     return patched_filenames
 
-  @staticmethod
-  def get_runtime_task_arns(region, clusters):
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def get_runtime_task_arns(self, region, clusters):
     runtime_task_arns = {}
 
     for cluster in clusters:
       command = f"aws ecs list-tasks --region {region} --cluster {cluster} --query taskArns[] --output text"
 
+      self.info_logger.info(f'executing command {command}')
       result = subprocess.run(command, capture_output=True, text=True, shell=True)
 
       if result.returncode != 0:
         print(f"Error executing command {command}: {result.stderr}")
+        self.error_logger.error(f"Error executing command {command}: {result.stderr}")
       else:
         runtime_task_arns[cluster] = {}
         runtime_task_arns[cluster] = result.stdout.rsplit()
 
     return runtime_task_arns
 
-  @staticmethod
-  def register_task_definitions(patched_filenames):
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def register_task_definitions(self, patched_filenames):
     registered_definitions = []
     cwd = os.getcwd()
 
@@ -307,6 +358,7 @@ class AWSECSClusterManager:
                   f'--cli-input-json ' \
                   f'file://{cwd}/tmp/aws/ecs/patched_definitions/{filename}'
 
+        self.info_logger.info(f'executing command: {command}')
         result = subprocess.run(command, capture_output=True, text=True, shell=True)
 
         if result.returncode != 0:
@@ -314,18 +366,22 @@ class AWSECSClusterManager:
         else:
           command = f'aws ecs list-task-definitions --family-prefix {definition} ' \
                     f'--region {region} --sort DESC --output json'
+
+          self.info_logger.info(f'executing command: {command}')
           result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
           data = json.loads(result.stdout)
 
           registered_definitions.append(data['taskDefinitionArns'][0])
       except Exception as e:
+        self.error_logger.error(f"An error {e} occurred while registering a task definition: {definition}")
         print(f"An error {e} occurred while registering a task definition: {definition}")
 
     return registered_definitions
 
-  @staticmethod
-  def get_task_map(region, cluster, task_name):
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def get_task_map(self, region, cluster, task_name):
     """
     This function returns a map of task details including task ARN, security group ID, subnet ID, cluster ARN,
     launch type, task definition ARN, containers, and tags.
@@ -343,10 +399,12 @@ class AWSECSClusterManager:
     describe_task = f"aws ecs describe-tasks --cluster {cluster} --region {region} --tasks {task_name} " \
                     f"--include TAGS --output json"
 
+    self.info_logger.info(f'executing command: {describe_task}')
     task_result = subprocess.run(describe_task, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
     # Raise error if command execution failed
     if task_result.returncode != 0:
+      self.error_logger.error(f"Error executing command {describe_task}. Error: {task_result.stderr}")
       print(f"Error executing command {describe_task}. Error: {task_result.stderr}")
       return False
 
@@ -359,11 +417,14 @@ class AWSECSClusterManager:
       get_security_group = "aws ec2 describe-network-interfaces --network-interface-ids " \
                            f"{network_interface_id} --region {region} " \
                            f"--query 'NetworkInterfaces[0].Groups[].GroupId' --output text"
+
+      self.info_logger.info(f'executing command: {get_security_group}')
       int_result = subprocess.run(get_security_group, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                   shell=True)
 
       # Raise error if command execution failed
       if int_result.returncode != 0:
+        self.error_logger.error(f"Error executing command {get_security_group}. Error: {int_result.stderr}")
         print(f"Error executing command {get_security_group}. Error: {int_result.stderr}")
         return False
 
@@ -385,9 +446,12 @@ class AWSECSClusterManager:
 
       return task_map
     except (json.JSONDecodeError, IndexError, KeyError, Exception) as e:
-      print(f"An error occurred while processing task details: {e}")
+      self.error_logger.error(f"An error occurred while processing task details: {e}")
+      # print(f"An error occurred while processing task details: {e}")
       return False
 
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
   def get_definitions_maps(self, region, cluster_arns, registered_definitions):
     """
     This function creates a map of ECS task definitions to their associated runtime tasks. The output dictionary
@@ -430,7 +494,6 @@ class AWSECSClusterManager:
             ) and (
               reg_def.split(':')[-2] == task_map['taskDefinitionArn'].split(':')[-2]
             ):
-
               tasks.append(task_map)
 
         # Only add the task definition to the map if it has running tasks
@@ -445,8 +508,9 @@ class AWSECSClusterManager:
 
     return definition_maps
 
-  @staticmethod
-  def launch_tasks(region, task_arns, definition):
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def launch_tasks(self, region, task_arns, definition):
     """Launch new tasks in ECS clusters.
 
     Args:
@@ -472,6 +536,7 @@ class AWSECSClusterManager:
                 f"securityGroups=[{arn['securityGroupId']}],assignPublicIp=ENABLED}}' " \
                 f"--region {region}"
 
+      self.info_logger.info(f'executing command: {command}')
       result = subprocess.run(command, capture_output=True, text=True, shell=True)
 
       if result.returncode != 0:
@@ -491,8 +556,9 @@ class AWSECSClusterManager:
 
     return launched_task_arns
 
-  @staticmethod
-  def check_task_status(region, launched_task_arns):
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def check_task_status(self, region, launched_task_arns):
     """Check the status of launched tasks in ECS clusters.
 
     This function will check if the recently launched tasks are in 'RUNNING' state. It checks every 2 seconds
@@ -507,7 +573,7 @@ class AWSECSClusterManager:
     """
     failed = 0
 
-    print('\nChecking if the recently launched tasks are running...\n')
+    self.info_logger.info('\nChecking if the recently launched tasks are running...\n')
 
     for cluster_arn, launched_task_arns in launched_task_arns.items():
       for launched_task_arn in launched_task_arns:
@@ -527,26 +593,28 @@ class AWSECSClusterManager:
             status = response_json['tasks'][0]['lastStatus']
 
             if status == 'RUNNING':
-              print(f"{launched_task_arn} task is now running")
+              self.info_logger.info(f"{launched_task_arn} task is now running")
               break
             elif status == 'STOPPED':
               failed += 1
+              self.error_logger.error(f"{launched_task_arn} task stopped unexpectedly")
               raise Exception(f"{launched_task_arn} task stopped unexpectedly")
 
             time.sleep(2)
             counter += 1
 
           if counter == max_attempts:
-            print(f'{launched_task_arn} failed to run')
-            print('this program will not terminate old tasks')
+            self.info_logger.info(f'{launched_task_arn} failed to run')
+            self.info_logger.info('this program will not terminate old tasks')
             failed += 1
         except Exception as e:
-          print(f'{launched_task_arn} failed to run. Error: {e}')
+          self.error_logger.error(f'{launched_task_arn} failed to run. Error: {e}')
 
     return failed == 0
 
-  @staticmethod
-  def remove_old_tasks(region, task_arns):
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def remove_old_tasks(self, region, task_arns):
     """Stop old tasks in ECS clusters.
 
     This function will stop all tasks provided in the list `task_arns`.
@@ -567,20 +635,24 @@ class AWSECSClusterManager:
 
       try:
         command = f"aws ecs stop-task --cluster {task_arn['clusterArn']} --task {task_arn['taskArn']} --region {region}"
+
+        self.info_logger.info(f'executing command: {command}')
         result = subprocess.run(command, capture_output=True, text=True, shell=True)
 
         if result.returncode != 0:
           failed += 1
-          print(f"Error executing command: {result.stderr}")
+          self.error_logger.error(f"Error executing command: {result.stderr}")
         else:
-          print(task_arn['taskArn'], 'task stopped successfully')
+          self.info_logger.info(task_arn['taskArn'], 'task stopped successfully')
       except Exception as e:
         failed += 1
-        print(f"{task_arn['taskArn']} did not stop successfully. Error: {e}")
+        self.error_logger.error(f"{task_arn['taskArn']} did not stop successfully. Error: {e}")
 
     return failed == 0
 
-  def run_and_stop_tasks(self, region, definitions_maps):
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def run_and_stop_tasks(self, region, definitions_maps, stop_tasks='yes'):
     """Run new tasks and stop old tasks in ECS clusters.
 
     This function will launch new tasks for each task definition provided,
@@ -590,6 +662,7 @@ class AWSECSClusterManager:
         region (str): The AWS region where the tasks are located.
         definitions_maps (dict): A dictionary mapping task definitions to tasks.
                                  Each task is represented as a dictionary mapping cluster ARNs to task ARNs.
+        stop_tasks: Selecting yes will stop all the old tasks after launching new ones
 
     Returns:
         bool: True if all tasks are successfully launched and old tasks are removed, False otherwise.
@@ -620,22 +693,20 @@ class AWSECSClusterManager:
             failure_count += 1
             continue
 
-          # Stop old tasks
-          removal_status = self.remove_old_tasks(region, task_arns)
+          if stop_tasks == 'yes':
+            # Stop old tasks
+            removal_status = self.remove_old_tasks(region, task_arns)
 
-          # If old tasks removal failed, increment failure count
-          if not removal_status:
-            failure_count += 1
+            # If old tasks removal failed, increment failure count
+            if not removal_status:
+              failure_count += 1
 
     # If any operation failed, return False. Otherwise, return True
     return failure_count == 0
 
-  def start_ecs_cluster_operations(self, options):
-    if options.get('ecs_config_file') is not None:
-      file_path = options.get('ecs_config_file')
-    else:
-      file_path = 'conf/aws/ecs/ecs-fargate.config'
-
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def get_aws_keys(self, options):
     keys_to_extract = ['ecs_falcon_cid', 'ecs_image_uri']
     keys = {key: options[key] for key in keys_to_extract if options.get(key) is not None}
 
@@ -647,7 +718,7 @@ class AWSECSClusterManager:
     aws_repo = ecs_image_uri_parts[1].split(':')[0]
     image_version = ecs_image_uri_parts[1].split(':')[1]
 
-    aws_keys = {
+    return {
       'aws_account_id': aws_account_id,
       'aws_repo_region': aws_repo_region,
       'aws_repo': aws_repo,
@@ -655,37 +726,93 @@ class AWSECSClusterManager:
       'falcon_cid': keys['ecs_falcon_cid']
     }
 
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def patch_definition_ops(self, region, clusters, task_definitions, aws_keys):
+    # Get a list of relevant cluster arns
+    self.info_logger.info('getting a list of cluster arns')
+    cluster_arns = self.get_cluster_arns(region, clusters)
+    self.info_logger.info(f'{cluster_arns}')
+
+    # Get a list of relevant task definition arns
+    self.info_logger.info('getting a list of task definitions')
+    if clusters != 'all_clusters' and task_definitions[0] == 'all_task_definitions':
+      task_definition_arns = self.get_cluster_specific_task_definition_arns(region, cluster_arns)
+      self.info_logger.info(f'{task_definition_arns}')
+    else:
+      task_definition_arns = self.get_task_definition_arns(region, task_definitions)
+      self.info_logger.info(f'{task_definition_arns}')
+
+    # Download task definition json files to task_definitions directory
+    self.info_logger.info('downloading task definition files in json format')
+    task_definition_json_files = self.get_task_definition_json_files(region, task_definition_arns)
+    self.info_logger.info(f'{task_definition_json_files}')
+
+    # Patch task definitions and get a list of patched files
+    # Note: This method will ignore the task definitions with a Falcon Sensor
+    self.info_logger.info('patching task definition files and preparing a list of patched filenames')
+    patched_filenames = self.patch_task_definitions(aws_keys, task_definition_json_files)
+    self.info_logger.info(f'{patched_filenames}')
+
+    return patched_filenames, cluster_arns
+
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def register_definition_ops(self, patched_filenames):
+    # Register task definitions
+    self.info_logger.info('registering task definitions')
+    registered_definitions = self.register_task_definitions(patched_filenames)
+    self.info_logger.info(f'{registered_definitions}')
+
+    return registered_definitions
+
+  def definition_start_stop_ops(self, region, cluster_arns, clusters, options, registered_definitions):
+    # Get maps of all definitions with the details of tasks to be deployed and stopped
+    self.info_logger.info('getting maps of all definitions with the details of tasks to be deployed and '
+                          'stopped')
+    definitions_maps = self.get_definitions_maps(region, cluster_arns, registered_definitions)
+    self.info_logger.info(f'{definitions_maps}')
+
+    # Check the final status to see if the method was able to start new tasks and stop old ones
+    self.info_logger.info('checking to see if the method was able to start new tasks and then stop old tasks')
+
+    if options['ecs_stop_previous_tasks'] == 'yes':
+      status = self.run_and_stop_tasks(region, definitions_maps)
+    else:
+      stop_tasks = 'no'
+      status = self.run_and_stop_tasks(region, definitions_maps, stop_tasks)
+
+    self.info_logger.info(f'{status}')
+
+    if status:
+      print(f'Deployment on {clusters} within {region} successful.\n')
+      self.info_logger.info(f'Deployment on {clusters} within {region} successful.\n')
+    else:
+      print(f'Deployment on {clusters} within {region} failed.\n')
+      self.info_logger.info(f'Deployment on {clusters} within {region} failed.\n')
+
+  @decorator.standard_func_logger
+  @decorator.standard_func_timer
+  def start_ecs_cluster_operations(self, options):
+    if options.get('ecs_config_file') is not None:
+      file_path = options.get('ecs_config_file')
+    else:
+      file_path = 'conf/aws/ecs/ecs-fargate.config'
+
+    aws_keys = self.get_aws_keys(options)
+
     config_file_parameters = self.read_config_file(file_path)
 
     for region, ecs_clusters in config_file_parameters.items():
+      print(f'starting requested operations on region {region}\n')
+      self.info_logger.info(f'starting requested operations on region {region}\n')
+
       for clusters, task_definitions in ecs_clusters.items():
-        # Get a list of relevant cluster arns
-        cluster_arns = self.get_cluster_arns(region, clusters)
+        patched_filenames, cluster_arns = self.patch_definition_ops(region, clusters, task_definitions, aws_keys)
 
-        # Get a list of relevant task definition arns
-        if clusters != 'all_clusters' and task_definitions[0] == 'all_task_definitions':
-          task_definition_arns = self.get_cluster_specific_task_definition_arns(region, cluster_arns)
-        else:
-          task_definition_arns = self.get_task_definition_arns(region, task_definitions)
+        if options['ecs_register_definitions'] == 'yes':
+          registered_definitions = self.register_definition_ops(patched_filenames)
 
-        # Download task definition json files to task_definitions directory
-        task_definition_json_files = self.get_task_definition_json_files(region, task_definition_arns)
-
-        # Patch task definitions and get a list of patched files
-        # Note: This method will ignore the task definitions with a Falcon Sensor
-        patched_filenames = self.patch_task_definitions(aws_keys, task_definition_json_files)
-
-        # Register task definitions
-        registered_definitions = self.register_task_definitions(patched_filenames)
-
-        if registered_definitions:
-          # Get maps of all definitions with the details of tasks to be deployed and stopped
-          definitions_maps = self.get_definitions_maps(region, cluster_arns, registered_definitions)
-
-          # Check the final status to see if the method was able to start new tasks and stop old ones
-          status = self.run_and_stop_tasks(region, definitions_maps)
-
-          if status:
-            print(f'Deployment on {clusters} within {region} successful.\n')
-          else:
-            print(f'Deployment on {clusters} within {region} failed.\n')
+          if options['ecs_launch_new_tasks'] == 'yes':
+            if registered_definitions:
+              self.definition_start_stop_ops(region, cluster_arns, clusters, options, registered_definitions)
