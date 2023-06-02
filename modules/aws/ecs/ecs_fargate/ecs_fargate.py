@@ -255,14 +255,14 @@ class AWSECSClusterManager:
         continue
 
       try:
-        docker_run = f'sudo docker run --rm -v {cwd}/tmp/aws/ecs/temp_definition:/var/run/spec --rm \
-                      {aws_keys["aws_account_id"]}.dkr.ecr.{aws_keys["aws_repo_region"]}.\
-                      amazonaws.com/{aws_keys["aws_repo"]}:{aws_keys["image_version"]} \
-                      -cid {aws_keys["falcon_cid"]} \
-                      -image {aws_keys["aws_account_id"]}.dkr.ecr.{aws_keys["aws_repo_region"]}.\
-                      amazonaws.com/{aws_keys["aws_repo"]}:{aws_keys["image_version"]} \
-                      -ecs-spec-file /var/run/spec/taskdefinition.json \
-                      -pulltoken {pull_token} > tmp/aws/ecs/patched_definitions/{filename}'
+        docker_run = f'sudo docker run --rm -v {cwd}/tmp/aws/ecs/temp_definition:/var/run/spec --rm ' \
+                     f'{aws_keys["aws_account_id"]}.dkr.ecr.{aws_keys["aws_repo_region"]}.' \
+                     f'amazonaws.com/{aws_keys["aws_repo"]}:{aws_keys["image_version"]} ' \
+                     f'-cid {aws_keys["falcon_cid"]} ' \
+                     f'-image {aws_keys["aws_account_id"]}.dkr.ecr.{aws_keys["aws_repo_region"]}.' \
+                     f'amazonaws.com/{aws_keys["aws_repo"]}:{aws_keys["image_version"]} ' \
+                     f'-ecs-spec-file /var/run/spec/taskdefinition.json ' \
+                     f'-pulltoken {pull_token} > tmp/aws/ecs/patched_definitions/{filename}'
 
         print(docker_run)
         exit()
