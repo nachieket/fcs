@@ -97,6 +97,8 @@ def main():
         eks_fargate = AWSFargateClusterManager()
         eks_fargate.start_eks_fargate_operations(options)
     elif options['cluster'] == 'ecs_fargate':
+      check_and_add_system_tools()
+      
       system = SystemCheck()
       system.check_and_install_docker()
 
