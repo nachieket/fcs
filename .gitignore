@@ -13,3 +13,5 @@ aws/eks/eks_managed_node/.terraform
 aws/eks/.terraform.lock.hcl
 aws/eks/eks_managed_node/eks_managed_node_v01.py
 **/.terraform/
+*.pyc
+__pycache__/
