@@ -1,3 +1,9 @@
+.DS_Store
+env/
+.venv/
+.env
+*.swp
+dist
 dev
 dev/
 aws/dev
@@ -13,3 +19,9 @@ aws/eks/eks_managed_node/.terraform
 aws/eks/.terraform.lock.hcl
 aws/eks/eks_managed_node/eks_managed_node_v01.py
 **/.terraform/
+*.pyc
+__pycache__/
+*.egg
+.eggs/
+.vscode/
+*.egg-info/
